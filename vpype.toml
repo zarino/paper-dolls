@@ -1,7 +1,8 @@
 [gwrite.my_own_plotter]
 unit = "mm"
 
-document_start = """G17
+document_start = """
+G17
 G21
 G28
 G90
@@ -10,21 +11,24 @@ M3 S05
 G4 P0.3
 """
 
-document_end = """M3 S05
+document_end = """
+M3 S05
 G4 P0.3
 G1 X.000 Y.000
 """
 
-line_start = """M3 S120
+segment_first = """
+G00 X{x:.4f} Y{y:.4f}
+M3 S120
 G4 P0.3
 """
 
-line_end = """M3 S05
+segment = """
+G01 X{x:.4f} Y{y:.4f}
+"""
+
+segment_last = """
+G01 X{x:.4f} Y{y:.4f}
+M3 S05
 G4 P0.3
-"""
-
-segment_first = """G00 X{x:.4f} Y{y:.4f}
-"""
-
-segment = """G01 X{x:.4f} Y{y:.4f}
 """
