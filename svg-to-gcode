@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+shopt -s nullglob
+
+SCRIPT=$(basename $0)
+PATHS=() # Bash array
+
+usage()
+{
+    cat <<EOF
+Usage: $SCRIPT [--help] images ..."
+
+required arguments:
+  images        SVG files to be converted to Gcode
+
+optional arguments:
+  -h, --help    show this message and exit
+
+examples:
+  $SCRIPT foo.svg
+EOF
+}
+
+store_image_path() {
+    if [ -e "$1" ]; then
+            PATHS+=("$1")
+    else
+        echo "Unknown argument: $1"
+        usage
+        exit 1
+    fi
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+        -h | --help )           usage
+                                exit
+                                ;;
+        * )                     store_image_path "$1"
+                                ;;
+    esac
+    shift
+done
+
+for img in "${PATHS[@]}"; do
+    FILENAME_EXTENSIONLESS="${img%.*}"
+    vpype --config "vpype.toml" read "${FILENAME_EXTENSIONLESS}.svg" occult linesort gwrite --profile "my_own_plotter" "${FILENAME_EXTENSIONLESS}.gcode"
+done
