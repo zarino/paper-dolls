@@ -6,6 +6,8 @@ shopt -s nullglob
 SCRIPT=$(basename $0)
 PATHS=() # Bash array
 
+PAGEROTATE=""
+
 usage()
 {
     cat <<EOF
@@ -15,6 +17,7 @@ required arguments:
   images        SVG files to be converted to Gcode
 
 optional arguments:
+  --pagerotate  rotate SVG 90 degrees before converting to Gcode
   -h, --help    show this message and exit
 
 examples:
@@ -34,6 +37,8 @@ store_image_path() {
 
 while [ "$1" != "" ]; do
     case $1 in
+        --pagerotate )          PAGEROTATE="pagerotate"
+                                ;;
         -h | --help )           usage
                                 exit
                                 ;;
@@ -45,5 +50,9 @@ done
 
 for img in "${PATHS[@]}"; do
     FILENAME_EXTENSIONLESS="${img%.*}"
-    vpype --config "vpype.toml" read "${FILENAME_EXTENSIONLESS}.svg" occult linesort gwrite --profile "my_own_plotter" "${FILENAME_EXTENSIONLESS}.gcode"
+    vpype --config "vpype.toml" \
+    read "${FILENAME_EXTENSIONLESS}.svg" \
+    occult linesort $PAGEROTATE \
+    gwrite --profile "my_own_plotter" \
+    "${FILENAME_EXTENSIONLESS}.gcode"
 done
