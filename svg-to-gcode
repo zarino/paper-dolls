@@ -6,22 +6,32 @@ shopt -s nullglob
 SCRIPT=$(basename $0)
 PATHS=() # Bash array
 
-PAGEROTATE=""
+TRANSFORMATIONS=""
+PREVIEW=0
+OUTFILE=""
 
 usage()
 {
     cat <<EOF
-Usage: $SCRIPT [--help] images ..."
+Usage: $SCRIPT [--help] [--preview] [--transformations "<string>"] [--outfile "<filename>"] <image> ..."
 
 required arguments:
-  images        SVG files to be converted to Gcode
+  image                   one or more SVG files to be converted to Gcode
 
 optional arguments:
-  --pagerotate  rotate SVG 90 degrees before converting to Gcode
-  -h, --help    show this message and exit
+  -o, --outfile           output filename
+  -p, --preview           show a preview (with vpype show)
+                          rather than outputting a file
+  -t, --transformations   additional vpype commands to run,
+                          after the SVG is read but before
+                          occult and linesort are applied
+  -h, --help              show this message and exit
 
 examples:
   $SCRIPT foo.svg
+  $SCRIPT foo.svg -o bar.gcode
+  $SCRIPT --preview foo.svg
+  $SCRIPT -t "rotate -o 0 0 90 layout -h right -v top a4" foo.svg
 EOF
 }
 
@@ -37,22 +47,43 @@ store_image_path() {
 
 while [ "$1" != "" ]; do
     case $1 in
-        --pagerotate )          PAGEROTATE="pagerotate"
-                                ;;
-        -h | --help )           usage
-                                exit
-                                ;;
-        * )                     store_image_path "$1"
-                                ;;
+        -o | --outfile )          shift
+                                  OUTFILE="$1"
+                                  ;;
+        -p | --preview )          PREVIEW=1
+                                  ;;
+        -t | --transformations )  shift
+                                  TRANSFORMATIONS="$1"
+                                  ;;
+        -h | --help )             usage
+                                  exit
+                                  ;;
+        * )                       store_image_path "$1"
+                                  ;;
     esac
     shift
 done
 
-for img in "${PATHS[@]}"; do
-    FILENAME_EXTENSIONLESS="${img%.*}"
+for INFILE in "${PATHS[@]}"; do
+    # If --preview, then show output in vpype previewer,
+    # otherwise, gwrite it to the $OUTFILE
+    if [ "$PREVIEW" = "1" ]; then
+        OUTPUT="show"
+    else
+        # Construct a Gcode output file name
+        # if --outfile has not been specified.
+        if [ "$OUTFILE" = "" ]; then
+            OF="${INFILE%.*}.gcode"
+        else
+            OF="$OUTFILE"
+        fi
+        OUTPUT="gwrite --profile my_own_plotter $OF"
+    fi
+
     vpype --config "vpype.toml" \
-    read "${FILENAME_EXTENSIONLESS}.svg" \
-    occult linesort $PAGEROTATE \
-    gwrite --profile "my_own_plotter" \
-    "${FILENAME_EXTENSIONLESS}.gcode"
+    read "$INFILE" \
+    $TRANSFORMATIONS \
+    occult --ignore-layers --tolerance 0.5mm \
+    linesort \
+    $OUTPUT
 done
